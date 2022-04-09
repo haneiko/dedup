@@ -1,0 +1,4 @@
+(executable
+ (public_name dedup)
+ (name main)
+ (libraries dedup unix))
