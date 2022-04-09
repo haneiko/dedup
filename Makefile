@@ -4,8 +4,5 @@ build:
 run:
 	@dune exec dedup
 
-clean:
-	@dune clean
-
 deps:
 	@opam install ./*.opam --deps-only
