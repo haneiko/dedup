@@ -32,8 +32,26 @@ let rec list_files path =
       let subs = List.map list_files folders in
       List.fold_left List.append files subs
 
+let find_dups files =
+  let hash_file a = Digest.to_hex (Digest.file a) in
+  let hashes = List.map hash_file files in
+  let tb = Hashtbl.create (List.length files) in
+  List.iter2 (fun f h -> Hashtbl.add tb h f) files hashes;
+  Hashtbl.fold
+    (fun k _ l ->
+      match Hashtbl.find_all tb k with
+      | [] | [ _ ] | "" :: _ -> l
+      | dups ->
+          (* to avoid repeated keys: *)
+          Hashtbl.add tb k "";
+          dups :: l)
+    tb []
+
 let () =
   let files = list_files "." in
-  let prepend_hash a = Digest.to_hex (Digest.file a) ^ " " ^ a in
-  let files_with_hash = List.map prepend_hash files in
-  ignore (List.map print_endline files_with_hash)
+  let dups = find_dups files in
+  List.iter
+    (fun l ->
+      List.iter print_endline l;
+      print_endline "")
+    dups
