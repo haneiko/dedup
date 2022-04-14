@@ -5,21 +5,20 @@ let opendir path =
     None
 
 let readdir dir_handle =
-  let content = ref [] in
-  try
-    while true do
+  let rec _readdir list =
+    try
       match Unix.readdir dir_handle with
-      | "." | ".." -> ()
-      | entry -> content := entry :: !content
-    done;
-    None (* ? *)
-  with
-  | End_of_file ->
-      Unix.closedir dir_handle;
-      Some !content
-  | exn ->
-      Unix.closedir dir_handle;
-      raise exn
+      | "." | ".." -> _readdir list
+      | entry -> _readdir (entry :: list)
+    with
+    | End_of_file ->
+        Unix.closedir dir_handle;
+        list
+    | exn ->
+        Unix.closedir dir_handle;
+        raise exn
+  in
+  Some (_readdir [])
 
 let prepend_path p files = List.map (fun a -> p ^ Filename.dir_sep ^ a) files
 let is_directory p = try Sys.is_directory p with Sys_error _ -> false
