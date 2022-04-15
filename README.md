@@ -21,8 +21,33 @@ dedup [-i] [-f] <dir>
 List duplicates:
 ```
 $ dedup .
+./_build/install/default/doc/dedup/LICENSE
+./_build/default/LICENSE
+./LICENSE
+
 ./_build/install/default/lib/dedup/opam
 ./_build/default/dedup.opam
+./dedup.opam
+
+./_build/install/default/doc/dedup/README.md
+./_build/default/README.md
+./README.md
+
+./.git/refs/remotes/origin/master
+./.git/refs/heads/master
+
+./_build/install/default/lib/dedup/dune-package
+./_build/default/dedup.dune-package
+
+./_build/install/default/bin/dedup
+./_build/default/bin/main.exe
+
+./_build/install/default/lib/dedup/META
+./_build/default/META.dedup
+
+./bin/main.ml
+./_build/default/bin/main.ml
+
 ```
 Interactive use (-i) lets you select files with the editor:
 ```
