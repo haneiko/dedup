@@ -112,12 +112,14 @@ let check_editor_var =
 
 let () =
   let ( let* ) o f = match o with None -> () | Some x -> f x in
-  let usage_msg = "dedup [-f]" in
+  let usage_msg = "dedup [-f] <dir>" in
   let remove = ref false in
+  let dir = ref "" in
+  let anon_fun path = dir := path in
   let speclist = [ ("-f", Arg.Set remove, "Remove selected files") ] in
-  Arg.parse speclist (fun _ -> ()) usage_msg;
+  Arg.parse speclist anon_fun usage_msg;
   let* editor = check_editor_var in
-  let files = list_files "." in
+  let files = list_files !dir in
   let dups = find_dups files in
   let str =
     "# Uncomment the files you want to remove\n"
@@ -131,6 +133,8 @@ let () =
   let to_remove = parse_list text in
   List.iter
     (fun a ->
-      if !remove then Unix.unlink a;
-      print_endline a)
+      if !remove then (
+        Unix.unlink a;
+        Printf.printf "removed %s\n" a)
+      else Printf.printf "remove? %s\n" a)
     to_remove
