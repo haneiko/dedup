@@ -61,7 +61,7 @@ let make_tmp_file text =
     None
 
 let join sep list =
-  List.fold_left (fun a b -> if a != "" then a ^ sep ^ b else b) "" list
+  List.fold_left (fun a b -> if a <> "" then a ^ sep ^ b else b) "" list
 
 let () =
   match Sys.getenv_opt "EDITOR" with
