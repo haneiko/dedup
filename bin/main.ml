@@ -144,6 +144,9 @@ let () =
   let anon_fun path = dir := path in
   let speclist = [ ("-f", Arg.Set remove, "Remove selected files") ] in
   Arg.parse speclist anon_fun usage_msg;
+  if !dir = "" then (
+    Arg.usage speclist usage_msg;
+    exit 1);
   let* editor = check_editor_var in
   let* files = list_files (remove_last_dir_sep !dir) in
   let* dups = find_dups files in
