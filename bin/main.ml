@@ -112,6 +112,10 @@ let check_editor_var =
 
 let () =
   let ( let* ) o f = match o with None -> () | Some x -> f x in
+  let usage_msg = "dedup [-f]" in
+  let remove = ref false in
+  let speclist = [ ("-f", Arg.Set remove, "Remove selected files") ] in
+  Arg.parse speclist (fun _ -> ()) usage_msg;
   let* editor = check_editor_var in
   let files = list_files "." in
   let dups = find_dups files in
@@ -124,4 +128,9 @@ let () =
   let* file_name = make_tmp_file str in
   let* _ = call_editor editor file_name in
   let* text = read_tmp_file file_name in
-  parse_list text |> List.iter print_endline
+  let to_remove = parse_list text in
+  List.iter
+    (fun a ->
+      if !remove then Unix.unlink a;
+      print_endline a)
+    to_remove
