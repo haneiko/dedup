@@ -52,7 +52,11 @@ let find_dups files =
         dups :: l
   in
   List.iter2 (fun f h -> Hashtbl.add tb h f) files hashes;
-  Hashtbl.fold fold tb []
+  match Hashtbl.fold fold tb [] with
+  | [] ->
+      print_endline "0 duplicates found in directory";
+      None
+  | list -> Some list
 
 let make_tmp_file text =
   try
@@ -127,7 +131,7 @@ let () =
   Arg.parse speclist anon_fun usage_msg;
   let* editor = check_editor_var in
   let* files = list_files !dir in
-  let dups = find_dups files in
+  let* dups = find_dups files in
   let str =
     "# Uncomment the files you want to remove\n"
     ^ "# then save and quit the editor:\n\n"
