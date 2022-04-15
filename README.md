@@ -1,27 +1,38 @@
 ## Usage:
 ```
-dedup [-f] <dir>
+dedup [-i] [-f] <dir>
 
-  dedup will recursively search <dir> for duplicated files (with same md5 hash),
-  then will open "EDITOR" with the list of duplicates found.
-  In the editor: duplicates will be grouped together, different files will
-  be separeted by an empty line.
-  All files will be commented out, uncommenting will mark the file for
-  deletion.
-  Will only delete if the option -f is provided in the cmd line.
+ dedup will recursively search <dir> for duplicated files (with same md5 hash).
+ With the -i option will open "EDITOR" with the list of duplicates found.
+ Without -i will only output the list.
+ Duplicates will be grouped together, different files will be separated
+ by an empty line.
+ In the editor: all files will be commented out, uncommenting will mark
+ the file for removal.
+ Saving then quiting the editor will remove the selected files,
+ but will only remove if the option -f was provided in the command line.
 
+  -i Select files with "EDITOR"
   -f Remove selected files
   -help  Display this list of options
   --help  Display this list of options
 ```
 ## Examples
+List duplicates:
 ```
-$ ./_build/default/bin/main.exe .
+$ dedup .
+./_build/install/default/lib/dedup/opam
+./_build/default/dedup.opam
+```
+Interactive use (-i) lets you select files with the editor:
+```
+$ dedup -i .
 remove? ./_build/install/default/lib/dedup/opam
-remove? ./_build/default/dedup.opam
-$ ./_build/default/bin/main.exe -f .
+```
+But will only remove with the -f option:
+```
+$ dedup -i -f .
 removed ./_build/install/default/lib/dedup/opam
-removed ./_build/default/dedup.opam
 ```
 ## Build
 ```
