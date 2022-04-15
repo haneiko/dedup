@@ -128,7 +128,16 @@ let remove_last_dir_sep path =
 
 let () =
   let ( let* ) o f = match o with None -> () | Some x -> f x in
-  let usage_msg = "dedup [-f] <dir>" in
+  let usage_msg =
+    "dedup [-f] <dir>\n\n\
+    \  dedup will search <dir> for duplicated files (with same md5 hash),\n\
+    \  then will open \"EDITOR\" with the list of duplicates found.\n\
+    \  In the editor: duplicates will be grouped together, different files will\n\
+    \  be separeted by an empty line.\n\
+    \  All files will be commented out, uncommenting will mark the file for\n\
+    \  deletion.\n\
+    \  Will only delete if the option -f is provided in the cmd line.\n"
+  in
   let remove = ref false in
   let dir = ref "" in
   let anon_fun path = dir := path in
