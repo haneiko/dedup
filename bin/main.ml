@@ -60,28 +60,68 @@ let make_tmp_file text =
     Printf.printf "%s: %s\n" (Unix.error_message err) arg;
     None
 
+let read_tmp_file file_name =
+  try
+    let file = Unix.openfile file_name [ Unix.O_RDONLY ] 0 in
+    let rec read str =
+      let size = 1024 in
+      let bytes = Bytes.make size '\n' in
+      let len = Unix.read file bytes 0 size in
+      if len = 0 then str ^ Bytes.sub_string bytes 0 len
+      else read (str ^ Bytes.sub_string bytes 0 len)
+    in
+    try
+      let text = read "" in
+      Unix.close file;
+      Some text
+    with Unix.Unix_error (err, _, arg) ->
+      Printf.printf "%s: %s\n" (Unix.error_message err) arg;
+      Unix.close file;
+      None
+  with Unix.Unix_error (err, _, arg) ->
+    Printf.printf "%s: %s\n" (Unix.error_message err) arg;
+    None
+
 let join sep list =
   List.fold_left (fun a b -> if a <> "" then a ^ sep ^ b else b) "" list
 
-let () =
+let call_editor editor file_name =
+  match Unix.system (editor ^ " " ^ file_name) with
+  | Unix.WSIGNALED v ->
+      Printf.printf "Editor not properly closed, signaled %d\n" v;
+      None
+  | Unix.WSTOPPED v ->
+      Printf.printf "Editor not properly closed, stopped %d\n" v;
+      None
+  | Unix.WEXITED 0 -> Some ()
+  | Unix.WEXITED v ->
+      Printf.printf "Editor not properly closed, exited %d\n" v;
+      None
+
+let parse_list str =
+  String.split_on_char '\n' str
+  |> List.map String.trim
+  |> List.filter (fun b -> b <> "" && not (String.starts_with ~prefix:"#" b))
+
+let check_editor_var =
   match Sys.getenv_opt "EDITOR" with
-  | None -> print_endline "environment variable \"EDITOR\" not set"
-  | Some editor -> (
-      let files = list_files "." in
-      let dups = find_dups files in
-      let str =
-        "# Uncomment the files you want to remove\n"
-        ^ "# then save and quit the editor:\n\n"
-        ^ join "\n\n"
-            (List.map
-               (fun l -> List.map (fun a -> "#" ^ a) l |> join "\n")
-               dups)
-      in
-      match make_tmp_file str with
-      | None -> ()
-      | Some file_name -> (
-          match Unix.system (editor ^ " " ^ file_name) with
-          | Unix.WSIGNALED v -> Printf.printf "signaled %d\n" v
-          | Unix.WSTOPPED v -> Printf.printf "stopped %d\n" v
-          | Unix.WEXITED 0 -> ()
-          | Unix.WEXITED v -> Printf.printf "exited %d\n" v))
+  | None ->
+      print_endline "environment variable \"EDITOR\" not set";
+      None
+  | Some editor -> Some editor
+
+let () =
+  let ( let* ) o f = match o with None -> () | Some x -> f x in
+  let* editor = check_editor_var in
+  let files = list_files "." in
+  let dups = find_dups files in
+  let str =
+    "# Uncomment the files you want to remove\n"
+    ^ "# then save and quit the editor:\n\n"
+    ^ join "\n\n"
+        (List.map (fun l -> List.map (fun a -> "#" ^ a) l |> join "\n") dups)
+  in
+  let* file_name = make_tmp_file str in
+  let* _ = call_editor editor file_name in
+  let* text = read_tmp_file file_name in
+  parse_list text |> List.iter print_endline
