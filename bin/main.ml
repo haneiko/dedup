@@ -23,14 +23,21 @@ let readdir dir_handle =
 let prepend_path p files = List.map (fun a -> p ^ Filename.dir_sep ^ a) files
 let is_directory p = try Sys.is_directory p with Sys_error _ -> false
 
-let rec list_files path =
-  let ( let* ) o f = match o with None -> [] | Some x -> f x in
-  let* dir = opendir path in
-  let* content = readdir dir in
-  let file_list = prepend_path path content in
-  let folders, files = List.partition is_directory file_list in
-  let subs = List.map list_files folders in
-  List.fold_left List.append files subs
+let list_files path =
+  let rec _list_files path =
+    let ( let* ) o f = match o with None -> [] | Some x -> f x in
+    let* dir = opendir path in
+    let* content = readdir dir in
+    let file_list = prepend_path path content in
+    let folders, files = List.partition is_directory file_list in
+    let subs = List.map _list_files folders in
+    List.fold_left List.append files subs
+  in
+  match _list_files path with
+  | [] ->
+      Printf.printf "0 files found in directory \"%s\"\n" path;
+      None
+  | list -> Some list
 
 let find_dups files =
   let hash_file a = Digest.to_hex (Digest.file a) in
@@ -119,7 +126,7 @@ let () =
   let speclist = [ ("-f", Arg.Set remove, "Remove selected files") ] in
   Arg.parse speclist anon_fun usage_msg;
   let* editor = check_editor_var in
-  let files = list_files !dir in
+  let* files = list_files !dir in
   let dups = find_dups files in
   let str =
     "# Uncomment the files you want to remove\n"
