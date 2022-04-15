@@ -130,7 +130,8 @@ let () =
   let ( let* ) o f = match o with None -> () | Some x -> f x in
   let usage_msg =
     "dedup [-f] <dir>\n\n\
-    \  dedup will search <dir> for duplicated files (with same md5 hash),\n\
+    \  dedup will recursively search <dir> for duplicated files (with same md5 \
+     hash),\n\
     \  then will open \"EDITOR\" with the list of duplicates found.\n\
     \  In the editor: duplicates will be grouped together, different files will\n\
     \  be separeted by an empty line.\n\
