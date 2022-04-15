@@ -121,6 +121,11 @@ let check_editor_var =
       None
   | Some editor -> Some editor
 
+let remove_last_dir_sep path =
+  if String.ends_with ~suffix:Filename.dir_sep path then
+    String.sub path 0 (String.length path - String.length Filename.dir_sep)
+  else path
+
 let () =
   let ( let* ) o f = match o with None -> () | Some x -> f x in
   let usage_msg = "dedup [-f] <dir>" in
@@ -130,7 +135,7 @@ let () =
   let speclist = [ ("-f", Arg.Set remove, "Remove selected files") ] in
   Arg.parse speclist anon_fun usage_msg;
   let* editor = check_editor_var in
-  let* files = list_files !dir in
+  let* files = list_files (remove_last_dir_sep !dir) in
   let* dups = find_dups files in
   let str =
     "# Uncomment the files you want to remove\n"
