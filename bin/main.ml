@@ -129,41 +129,56 @@ let remove_last_dir_sep path =
 let () =
   let ( let* ) o f = match o with None -> () | Some x -> f x in
   let usage_msg =
-    "dedup [-f] <dir>\n\n\
-    \  dedup will recursively search <dir> for duplicated files (with same md5 \
-     hash),\n\
-    \  then will open \"EDITOR\" with the list of duplicates found.\n\
-    \  In the editor: duplicates will be grouped together, different files will\n\
-    \  be separeted by an empty line.\n\
-    \  All files will be commented out, uncommenting will mark the file for\n\
-    \  deletion.\n\
-    \  Will only delete if the option -f is provided in the cmd line.\n"
+    "dedup [-i] [-f] <dir>\n\n\
+    \ dedup will recursively search <dir> for duplicated files (with same md5 \
+     hash).\n\
+    \ With the -i option will open \"EDITOR\" with the list of duplicates found.\n\
+    \ Without -i will only output the list.\n\
+    \ Duplicates will be grouped together, different files will be separated\n\
+    \ by an empty line.\n\
+    \ In the editor: all files will be commented out, uncommenting will mark\n\
+    \ the file for removal.\n\
+    \ Saving then quiting the editor will remove the selected files,\n\
+    \ but will only remove if the option -f was provided in the command line.\n"
   in
   let remove = ref false in
+  let interactive = ref false in
   let dir = ref "" in
   let anon_fun path = dir := path in
-  let speclist = [ ("-f", Arg.Set remove, "Remove selected files") ] in
+  let speclist =
+    [
+      ("-i", Arg.Set interactive, "Select files with \"EDITOR\"");
+      ("-f", Arg.Set remove, "Remove selected files");
+    ]
+  in
   Arg.parse speclist anon_fun usage_msg;
   if !dir = "" then (
     Arg.usage speclist usage_msg;
     exit 1);
-  let* editor = check_editor_var in
   let* files = list_files (remove_last_dir_sep !dir) in
   let* dups = find_dups files in
-  let str =
-    "# Uncomment the files you want to remove\n"
-    ^ "# then save and quit the editor:\n\n"
-    ^ join "\n\n"
-        (List.map (fun l -> List.map (fun a -> "#" ^ a) l |> join "\n") dups)
-  in
-  let* file_name = make_tmp_file str in
-  let* _ = call_editor editor file_name in
-  let* text = read_tmp_file file_name in
-  let to_remove = parse_list text in
-  List.iter
-    (fun a ->
-      if !remove then (
-        Unix.unlink a;
-        Printf.printf "removed %s\n" a)
-      else Printf.printf "remove? %s\n" a)
-    to_remove
+  if not !interactive then
+    List.iter
+      (fun a ->
+        List.iter (fun b -> print_endline b) a;
+        print_newline ())
+      dups
+  else
+    let str =
+      "# Uncomment the files you want to remove\n"
+      ^ "# then save and quit the editor:\n\n"
+      ^ join "\n\n"
+          (List.map (fun l -> List.map (fun a -> "#" ^ a) l |> join "\n") dups)
+    in
+    let* file_name = make_tmp_file str in
+    let* editor = check_editor_var in
+    let* _ = call_editor editor file_name in
+    let* text = read_tmp_file file_name in
+    let to_remove = parse_list text in
+    List.iter
+      (fun a ->
+        if !remove then (
+          Unix.unlink a;
+          Printf.printf "removed %s\n" a)
+        else Printf.printf "remove? %s\n" a)
+      to_remove
