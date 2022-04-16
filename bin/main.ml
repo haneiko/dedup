@@ -41,7 +41,7 @@ let list_files path =
 
 let find_dups files =
   let hash_file a = Digest.to_hex (Digest.file a) in
-  let hashes = List.map hash_file files in
+  let hashes = List.map (fun a -> (a, hash_file a)) files in
   let tb = Hashtbl.create (List.length files) in
   let fold k _ l =
     match Hashtbl.find_all tb k with
@@ -51,7 +51,7 @@ let find_dups files =
         Hashtbl.add tb k "";
         dups :: l
   in
-  List.iter2 (fun f h -> Hashtbl.add tb h f) files hashes;
+  List.iter (fun (f, h) -> Hashtbl.add tb h f) hashes;
   match Hashtbl.fold fold tb [] with
   | [] ->
       print_endline "0 duplicates found in directory";
