@@ -25,13 +25,16 @@ let is_directory p = try Sys.is_directory p with Sys_error _ -> false
 
 let list_files path =
   let rec _list_files path =
-    let ( let* ) o f = match o with None -> [] | Some x -> f x in
-    let* dir = opendir path in
-    let* content = readdir dir in
-    let file_list = prepend_path path content in
-    let folders, files = List.partition is_directory file_list in
-    let subs = List.map _list_files folders in
-    List.fold_left List.append files subs
+    let open Option in
+    match
+      bind (opendir path) readdir
+      |> map (prepend_path path)
+      |> map (List.partition is_directory)
+      |> map (fun (folders, files) ->
+             List.map _list_files folders |> List.fold_left List.append files)
+    with
+    | None -> []
+    | Some l -> l
   in
   match _list_files path with
   | [] ->
