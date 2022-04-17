@@ -94,12 +94,12 @@ let join sep list =
 let call_editor editor file_name =
   match Unix.system (editor ^ " " ^ file_name) with
   | Unix.WSIGNALED v ->
-      Error (Printf.sprintf "Editor not properly closed, signaled %d\n" v)
+      Error (Printf.sprintf "problem with editor, signaled %d\n" v)
   | Unix.WSTOPPED v ->
-      Error (Printf.sprintf "Editor not properly closed, stopped %d\n" v)
+      Error (Printf.sprintf "problem with editor, stopped %d\n" v)
   | Unix.WEXITED 0 -> Ok ()
   | Unix.WEXITED v ->
-      Error (Printf.sprintf "Editor not properly closed, exited %d\n" v)
+      Error (Printf.sprintf "problem with editor, exited %d\n" v)
 
 let parse_list str =
   String.split_on_char '\n' str
