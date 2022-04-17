@@ -1,8 +1,7 @@
 let opendir path =
-  try Some (Unix.opendir path)
+  try Ok (Unix.opendir path)
   with Unix.Unix_error (err, _, arg) ->
-    Printf.printf "%s: %s\n" (Unix.error_message err) arg;
-    None
+    Error (Printf.sprintf "%s: %s\n" (Unix.error_message err) arg)
 
 let readdir dir_handle =
   let rec _readdir list =
@@ -18,29 +17,27 @@ let readdir dir_handle =
         Unix.closedir dir_handle;
         raise exn
   in
-  Some (_readdir [])
+  Ok (_readdir [])
 
 let prepend_path p files = List.map (fun a -> p ^ Filename.dir_sep ^ a) files
 let is_directory p = try Sys.is_directory p with Sys_error _ -> false
 
 let list_files path =
-  let rec _list_files path =
-    let open Option in
-    match
-      bind (opendir path) readdir
-      |> map (prepend_path path)
-      |> map (List.partition is_directory)
-      |> map (fun (folders, files) ->
-             List.map _list_files folders |> List.fold_left List.append files)
-    with
-    | None -> []
-    | Some l -> l
+  let rec _list_files folders files =
+    let path = List.hd folders in
+    let flip f a b = f b a in
+    let open Result in
+    bind (opendir path) readdir
+    |> map (prepend_path path)
+    |> map (List.partition is_directory)
+    |> flip bind (fun (sub_folders, sub_files) ->
+           let s = List.tl folders @ sub_folders in
+           let f = files @ sub_files in
+           if List.length s = 0 then Ok f else _list_files s f)
   in
-  match _list_files path with
-  | [] ->
-      Printf.printf "0 files found in directory \"%s\"\n" path;
-      None
-  | list -> Some list
+  match _list_files [ path ] [] with
+  | Ok [] -> Error (Printf.sprintf "0 files found in directory \"%s\"\n" path)
+  | other -> other
 
 let find_dups files =
   let hash_file a = Digest.to_hex (Digest.file a) in
@@ -56,10 +53,8 @@ let find_dups files =
   in
   List.iter (fun (f, h) -> Hashtbl.add tb h f) hashes;
   match Hashtbl.fold fold tb [] with
-  | [] ->
-      print_endline "0 duplicates found in directory";
-      None
-  | list -> Some list
+  | [] -> Error "0 duplicates found in directory"
+  | list -> Ok list
 
 let make_tmp_file text =
   try
@@ -69,10 +64,9 @@ let make_tmp_file text =
      with Unix.Unix_error (err, _, arg) ->
        Printf.printf "%s: %s\n" (Unix.error_message err) arg);
     Unix.close file;
-    Some file_name
+    Ok file_name
   with Unix.Unix_error (err, _, arg) ->
-    Printf.printf "%s: %s\n" (Unix.error_message err) arg;
-    None
+    Error (Printf.sprintf "%s: %s\n" (Unix.error_message err) arg)
 
 let read_tmp_file file_name =
   try
@@ -87,14 +81,12 @@ let read_tmp_file file_name =
     try
       let text = read "" in
       Unix.close file;
-      Some text
+      Ok text
     with Unix.Unix_error (err, _, arg) ->
-      Printf.printf "%s: %s\n" (Unix.error_message err) arg;
       Unix.close file;
-      None
+      Error (Printf.sprintf "%s: %s\n" (Unix.error_message err) arg)
   with Unix.Unix_error (err, _, arg) ->
-    Printf.printf "%s: %s\n" (Unix.error_message err) arg;
-    None
+    Error (Printf.sprintf "%s: %s\n" (Unix.error_message err) arg)
 
 let join sep list =
   List.fold_left (fun a b -> if a <> "" then a ^ sep ^ b else b) "" list
@@ -102,15 +94,12 @@ let join sep list =
 let call_editor editor file_name =
   match Unix.system (editor ^ " " ^ file_name) with
   | Unix.WSIGNALED v ->
-      Printf.printf "Editor not properly closed, signaled %d\n" v;
-      None
+      Error (Printf.sprintf "Editor not properly closed, signaled %d\n" v)
   | Unix.WSTOPPED v ->
-      Printf.printf "Editor not properly closed, stopped %d\n" v;
-      None
-  | Unix.WEXITED 0 -> Some ()
+      Error (Printf.sprintf "Editor not properly closed, stopped %d\n" v)
+  | Unix.WEXITED 0 -> Ok ()
   | Unix.WEXITED v ->
-      Printf.printf "Editor not properly closed, exited %d\n" v;
-      None
+      Error (Printf.sprintf "Editor not properly closed, exited %d\n" v)
 
 let parse_list str =
   String.split_on_char '\n' str
@@ -119,10 +108,8 @@ let parse_list str =
 
 let check_editor_var =
   match Sys.getenv_opt "EDITOR" with
-  | None ->
-      print_endline "environment variable \"EDITOR\" not set";
-      None
-  | Some editor -> Some editor
+  | None | Some "" -> Error "environment variable \"EDITOR\" not set"
+  | Some editor -> Ok editor
 
 let remove_last_dir_sep path =
   if String.ends_with ~suffix:Filename.dir_sep path then
@@ -130,7 +117,7 @@ let remove_last_dir_sep path =
   else path
 
 let () =
-  let ( let* ) o f = match o with None -> () | Some x -> f x in
+  let ( let* ) o f = match o with Error e -> print_endline e | Ok x -> f x in
   let usage_msg =
     "dedup [-i] [-f] <dir>\n\n\
     \ dedup will recursively search <dir> for duplicated files (with same md5 \
