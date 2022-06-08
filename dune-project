@@ -11,16 +11,11 @@
 
 (maintainers "Mateus Haneiko")
 
-(license LICENCE)
+(license ISC)
 
-; (documentation https://url/to/documentation)
-
-; (package
-;  (name dedup)
-;  (synopsis "A short synopsis")
-;  (description "A longer description")
-;  (depends ocaml dune)
-;  (tags
-;   (topics "to describe" your project)))
-
-; See the complete stanza docs at https://dune.readthedocs.io/en/stable/dune-files.html#dune-project
+(package
+ (name dedup)
+ (synopsis "dedup searches for duplicated files")
+ (description
+  "dedup will recursively search <dir> for duplicated files (with same md5 hash)")
+ (depends ocaml dune))
